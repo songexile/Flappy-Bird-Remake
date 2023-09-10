@@ -2,94 +2,114 @@ import * as THREE from "three";
 import { createCube } from "./cube.js";
 import { initControls } from "./controls.js";
 import { createScore, updateScore, resetScore } from "./score.js";
+import { createBackground } from "./background.js";
 
-let isGameOver = false;
-let gameOverMesh;
+const fov = 100;
+const cubeHeight = 1;
+const cameraZPosition = 5;
+// Setup
+function setupScene() {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(
+    fov,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.z = cameraZPosition;
+  //const buildings = createBackground();
+  //scene.add(buildings);
+  const directionalLight = new THREE.DirectionalLight(0x2e8ae1, 2.5);
+  directionalLight.position.set(1, 1, 1);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+  scene.add(directionalLight);
+  scene.fog = new THREE.Fog(1);
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-// This function is async, when create score is created we add to scene
-createScore(function (scoreMesh) {
-  console.log(scoreMesh);
-  scene.add(scoreMesh);
-});
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const cube = createCube();
-scene.add(cube);
-
-camera.position.z = 5;
-
-let velocity = 0;
-const gravity = -0.001;
-const ceiling = 4;
-const floor = -3;
-
-function animate() {
-  fall();
-  checkDeath();
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
+  return { scene, camera, renderer };
 }
 
-function fall() {
-  velocity += gravity;
-  cube.position.y += velocity;
-  if (cube.position.y <= floor) {
-    cube.position.y = floor;
-    velocity = 0;
+// Main
+function main() {
+  const { scene, camera, renderer } = setupScene();
+  const cube = createCube();
+  const playerBox = new THREE.Box3();
+
+  scene.add(cube);
+
+  let velocity = 0;
+  const h = 2 * cameraZPosition * Math.tan((fov * Math.PI) / 180 / 2);
+  const gravity = -0.001;
+  const ceiling = (h - cubeHeight) / 2;
+  const floor = -ceiling;
+  let isGameOver = false;
+
+  function fall() {
+    velocity += gravity;
+    cube.position.y += velocity;
+    if (cube.position.y <= floor) {
+      cube.position.y = floor;
+      velocity = 0;
+    } else if (cube.position.y >= ceiling) {
+      cube.position.y = ceiling;
+      velocity = 0;
+    }
   }
-  if (cube.position.y >= ceiling) {
-    cube.position.y = ceiling;
-    velocity = 0;
+
+  function jump() {
+    velocity += 0.1;
+    updateScore(2);
   }
-}
 
-function jump() {
-  velocity += 0.1;
-  updateScore(2);
-}
+  function checkDeath() {
+    if (cube.position.y <= floor && !isGameOver) {
+      isGameOver = true;
+      console.log("You died!");
+      addEventListeners();
+    }
+  }
 
-function checkDeath() {
-  if (cube.position.y <= floor && !isGameOver) {
-    isGameOver = true;
-    console.log("You died!");
-
-    window.addEventListener("keydown", handleInput); // Event listener, to reset game
+  function addEventListeners() {
+    window.addEventListener("keydown", handleInput);
     window.addEventListener("click", handleInput);
+  }
+
+  function removeEventListeners() {
+    window.removeEventListener("keydown", handleInput);
+    window.removeEventListener("click", handleInput);
+  }
+
+  function handleInput(event) {
+    if (event.type === "keydown" && event.keyCode !== 32) return;
+    removeEventListeners();
+    resetGame();
+  }
+
+  function resetGame() {
+    resetScore();
+    cube.position.y = 0;
     isGameOver = false;
   }
-}
 
-function handleInput(event) {
-  // If the input is not a spacebar press (key code 32) or a click, return
-  if (event.type === "keydown" && event.keyCode !== 32) {
-    return;
+  function animate() {
+    fall();
+    checkDeath();
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
   }
 
-  // Remove the event listeners
-  window.removeEventListener("keydown", handleInput);
-  window.removeEventListener("click", handleInput);
+  createScore((scoreMesh) => {
+    console.log(scoreMesh);
+    scene.add(scoreMesh);
+  });
 
-  resetGame();
+  initControls({ jump });
+  animate();
 }
 
-function resetGame() {
-  resetScore();
-
-  cube.position.y = 0;
-}
-
-initControls({ jump });
-animate();
+main();
