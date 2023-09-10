@@ -1,14 +1,10 @@
 import * as THREE from "three";
 import { createCube } from "./cube.js";
 import { initControls } from "./controls.js";
-import {
-  createScore,
-  displayGameOver,
-  updateScore,
-  resetScore,
-} from "./score.js";
+import { createScore, updateScore, resetScore } from "./score.js";
 
 let isGameOver = false;
+let gameOverMesh;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -17,7 +13,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-
+// This function is async, when create score is created we add to scene
 createScore(function (scoreMesh) {
   console.log(scoreMesh);
   scene.add(scoreMesh);
@@ -69,18 +65,29 @@ function checkDeath() {
   if (cube.position.y <= floor && !isGameOver) {
     isGameOver = true;
     console.log("You died!");
-    displayGameOver(function (gameOverMesh) {
-      console.log(gameOverMesh);
-      resetGame();
-      //updateScore(2);
-      scene.add(gameOverMesh);
-      isGameOver = false;
-    });
+
+    window.addEventListener("keydown", handleInput); // Event listener, to reset game
+    window.addEventListener("click", handleInput);
+    isGameOver = false;
   }
+}
+
+function handleInput(event) {
+  // If the input is not a spacebar press (key code 32) or a click, return
+  if (event.type === "keydown" && event.keyCode !== 32) {
+    return;
+  }
+
+  // Remove the event listeners
+  window.removeEventListener("keydown", handleInput);
+  window.removeEventListener("click", handleInput);
+
+  resetGame();
 }
 
 function resetGame() {
   resetScore();
+
   cube.position.y = 0;
 }
 

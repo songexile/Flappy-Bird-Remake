@@ -24,25 +24,6 @@ export function createScore(callback) {
   });
 }
 
-export function displayGameOver(callback) {
-  if (!font) {
-    console.error("Font is not loaded yet.");
-    return;
-  }
-
-  const geometry = new TextGeometry("Game Over", {
-    font: font,
-    size: 0.5,
-    height: 0.1,
-  });
-
-  const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
-  const gameOverMesh = new THREE.Mesh(geometry, material);
-  gameOverMesh.position.set(-2, 0, 0);
-
-  callback(gameOverMesh);
-}
-
 export function updateScore(delta) {
   score += delta;
   if (!scoreMesh || !font) {
